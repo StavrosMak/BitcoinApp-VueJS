@@ -1,0 +1,101 @@
+<template>
+    <div class="currency-form-container">
+        <form class="form" @submit.prevent="getBitcoinPrice">
+            <h2>Bitcoin Price Converter</h2>
+            <div class="input-container">
+                <select class="selectionField" v-model="selectedCurrency">
+
+                    <option v-for="currency in currencies" :key="currency.code" :value="currency.code">
+                        {{ currency.flag }} {{ currency.name }}
+                    </option>
+                </select>
+                <button type="submit">Convert</button>
+            </div>
+        </form>
+
+        <div class="bitcoin-Price-Result" v-if="bitcoinPrice !== null">
+            <h2>Current Bitcoin Price:</h2>
+            <p>{{ bitcoinPrice }} {{ conversionCurrency }}</p>
+        </div>
+        <section class="avgerage-Price-section" v-if="bitcoinPrice !== null">
+            <h2>Average Bitcoin Price</h2>
+            <p>Last 5 minutes: {{ calculateAverage(5) }} {{ conversionCurrency }}</p>
+            <p>Last 30 minutes: {{ calculateAverage(30) }} {{ conversionCurrency }}</p>
+            <p>Last 60 minutes: {{ calculateAverage(60) }} {{ conversionCurrency }}</p>
+        </section>
+    </div>
+</template>
+
+
+
+<script>
+import currencies from '../../assets/data/currencies';
+export default {
+    name: 'FormSelection',
+    components: {},
+    data() {
+        return {
+            selectedCurrency: 'EUR',
+            conversionCurrency: '',
+            bitcoinPrice: null,
+            bitcoinPrices: [],
+            currencies: currencies,
+        };
+    },
+    methods: {
+        async getBitcoinPrice() {
+            const apiUrl = `https://api.coinbase.com/v2/prices/spot?currency=${this.selectedCurrency}`;
+
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+
+                if (data && data.data && data.data.amount) {
+                    // this.resetBitcoinPrices();
+                    this.conversionCurrency = this.selectedCurrency;
+                    this.bitcoinPrice = data.data.amount;
+                    // this.bitcoinPrices.push(parseFloat(data.data.amount));
+                    this.updateAverages();
+                    console.log(this.bitcoinPrices);
+                } else {
+                    console.error('Data is not in the expected format');
+                }
+            } catch (error) {
+                console.error(error);
+                console.log('Error fetching data');
+            }
+        },
+        calculateAverage(minutes) {
+            const prices = this.bitcoinPrices.slice(-minutes);
+            if (prices.length === 0) {
+                return 0;
+            }
+            const sum = prices.reduce((total, price) => total + price, 0);
+            return (sum / minutes).toFixed(2);
+        },
+        resetBitcoinPrices() {
+            this.bitcoinPrices = [];
+        },
+        updateAverages() {
+            this.calculateAverage(5);
+            this.calculateAverage(30);
+            this.calculateAverage(60);
+            // Update your average values here
+        },
+    },
+
+    mounted() {
+        // Start the interval timer to fetch new data every minute
+        this.intervalTimer = setInterval(this.getBitcoinPrice, 60000);
+    },
+    beforeUnmount() {
+        // Clear the interval timer when the component is destroyed
+        clearInterval(this.intervalTimer);
+    },
+};
+</script>
+
+<style>
+@import './Form.css';
+</style>
+  
